@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lab 01 - Nhóm 28</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <header>
+        <div class="container">
+            <h1>Lab 01 - Web NC</h1>
+            <p class="subtitle">Nhóm 28</p>
+        </div>
+    </header>
+
+    <main class="container">
+        <section class="project-info">
+            <h2>Thông tin dự án</h2>
+            <div class="info-grid">
+                <div class="info-card">
+                    <h3>Tên dự án</h3>
+                    <p id="projectName">Lab 01 - Nhóm 28</p>
+                </div>
+                <div class="info-card">
+                    <h3>Phiên bản</h3>
+                    <p id="version">1.0.0</p>
+                </div>
+                <div class="info-card">
+                    <h3>Công nghệ</h3>
+                    <ul id="technologies">
+                        <li>Node.js</li>
+                        <li>Express.js</li>
+                        <li>HTML/CSS/JS</li>
+                    </ul>
+                </div>
+                <div class="info-card">
+                    <h3>Thành viên</h3>
+                    <ul id="members">
+                        <li>2212389-Đỗ Lâm Ngọc An Khang</li>
+                        <li>2212436-Phan Thành Phát</li>
+                        <li>2212456 -Nguyễn Việt Bình</li>
+                    </ul>
+                </div>
+            </div>
+        </section>
+
+        <section class="server-info">
+            <h2>Phần A: Static Web Server</h2>
+            
+            <div class="test-section">
+                <h3>Server Information & System Details</h3>
+                <button id="getServerInfo" class="btn btn-primary">🔄 Lấy thông tin Server & Hệ thống</button>
+                <div id="serverInfoResult" class="result-box"></div>
+            </div>
+
+            <div class="test-section">
+                <h3>Server Timestamp</h3>
+                <div class="timestamp-display">
+                    <div class="time-item">
+                        <span class="time-label">Server Time:</span>
+                        <span id="serverTime" class="time-value">--</span>
+                    </div>
+                    <div class="time-item">
+                        <span class="time-label">Client Time:</span>
+                        <span id="clientTime" class="time-value">--</span>
+                    </div>
+                    <div class="time-item">
+                        <span class="time-label">Server Uptime:</span>
+                        <span id="serverUptime" class="time-value">--</span>
+                    </div>
+                </div>
+                <button id="updateTimestamp" class="btn btn-success">🕒 Cập nhật Timestamp</button>
+            </div>
+        </section>
+
+        <section class="api-testing">
+            <h2>API Testing</h2>
+            
+            <div class="test-section">
+                <h3>Server Status</h3>
+                <button id="testStatus" class="btn btn-primary">Kiểm tra trạng thái server</button>
+                <div id="statusResult" class="result-box"></div>
+            </div>
+
+            <div class="test-section">
+                <h3>Thông tin dự án</h3>
+                <button id="testInfo" class="btn btn-primary">Lấy thông tin dự án</button>
+                <div id="infoResult" class="result-box"></div>
+            </div>
+
+            <div class="test-section">
+                <h3>Gửi dữ liệu</h3>
+                <div class="input-group">
+                    <label for="dataInput">Nhập dữ liệu:</label>
+                    <input type="text" id="dataInput" placeholder="Nhập thông điệp..." value="Hello from Nhóm 28!">
+                    <button id="testData" class="btn btn-success">Gửi dữ liệu</button>
+                </div>
+                <div id="dataResult" class="result-box"></div>
+            </div>
+        </section>
+
+        <section class="network-info">
+            <h2>Thông tin mạng</h2>
+            <div class="network-stats">
+                <div class="stat-item">
+                    <span class="stat-label">Tổng số request:</span>
+                    <span id="totalRequests" class="stat-value">0</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label">Request thành công:</span>
+                    <span id="successRequests" class="stat-value">0</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label">Request thất bại:</span>
+                    <span id="failedRequests" class="stat-value">0</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label">Thời gian phản hồi trung bình:</span>
+                    <span id="avgResponseTime" class="stat-value">0ms</span>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <footer>
+        <div class="container">
+            <p>&copy; 2025 Lab 01 - Nhóm 28. Môn Web NC.</p>
+        </div>
+    </footer>
+
+    <script src="script.js"></script>
+</body>
+</html>

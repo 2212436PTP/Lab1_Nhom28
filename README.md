@@ -36,9 +36,9 @@ npm start
 ```
 
 ## Thành viên nhóm
-- Thành viên 1
-- Thành viên 2
-- Thành viên 3
+- 2212389 - Đỗ Lâm Ngọc An Khang    
+- 2212436 - Phan Thành Phát
+- 2213831 - Nguyễn Việt Bình 
 
 ## Ghi chú
 Vui lòng cập nhật thông tin thành viên và mô tả chi tiết dự án.

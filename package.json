@@ -7,8 +7,11 @@
     "start": "node server.js",
     "dev": "nodemon server.js",
     "client": "node client.js",
+    "client-test": "node client.js --test",
+    "client-demo": "node test-client-demo.js",
+    "client-quick": "node test-client-demo.js --quick",
     "monitor": "node monitor.js",
-    "test-part-b": "node client.js --part-b",
+    "test-part-b": "node client.js",
     "test-legacy": "node client.js --legacy"
   },
   "keywords": [

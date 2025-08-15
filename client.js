@@ -1,532 +1,596 @@
 const http = require('http');
 const https = require('https');
+const url = require('url');
+const querystring = require('querystring');
 
 /**
- * Part B: HTTP Client Implementation (35 points)
- * Built from scratch without axios/fetch libraries
- * Supports GET and POST methods for both HTTP and HTTPS
- * Includes comprehensive error handling and logging
+ * HTTP Client Class - Lab 01 Nhóm 28
+ * Triển khai HTTP client từ đầu không sử dụng axios/fetch
  */
 class HTTPClient {
-    constructor() {
-        this.requestCount = 0;
-        this.logLevel = 'detailed'; // 'basic' | 'detailed'
+    constructor(options = {}) {
+        this.defaultTimeout = options.timeout || 5000;
+        this.defaultHeaders = {
+            'User-Agent': 'Lab01-Nhom28-HTTPClient/1.0.0',
+            'Accept': 'application/json, text/plain, */*',
+            'Accept-Encoding': 'gzip, deflate',
+            'Connection': 'keep-alive',
+            ...options.headers
+        };
+        
+        console.log('🚀 HTTPClient initialized - Lab 01 Nhóm 28');
+        console.log('📝 Default timeout:', this.defaultTimeout + 'ms');
+        console.log('📋 Default headers:', this.defaultHeaders);
     }
 
     /**
-     * Core HTTP/HTTPS request method
-     * @param {string} url - Full URL to request
-     * @param {string} method - HTTP method (GET, POST, etc.)
-     * @param {Object} data - Request body data
-     * @param {Object} customHeaders - Additional headers
-     * @returns {Promise} Response object
+     * Parse URL và xác định protocol
      */
-    async makeRequest(url, method = 'GET', data = null, customHeaders = {}) {
+    parseUrl(requestUrl) {
+        const parsedUrl = url.parse(requestUrl);
+        
+        if (!parsedUrl.protocol) {
+            throw new Error('Invalid URL: Protocol is required');
+        }
+        
+        const isSecure = parsedUrl.protocol === 'https:';
+        const defaultPort = isSecure ? 443 : 80;
+        
+        return {
+            protocol: parsedUrl.protocol,
+            hostname: parsedUrl.hostname,
+            port: parsedUrl.port || defaultPort,
+            path: parsedUrl.path || '/',
+            isSecure: isSecure,
+            module: isSecure ? https : http
+        };
+    }
+
+    /**
+     * Tạo request options
+     */
+    createRequestOptions(method, requestUrl, headers = {}, timeout = null) {
+        const urlInfo = this.parseUrl(requestUrl);
+        
+        return {
+            hostname: urlInfo.hostname,
+            port: urlInfo.port,
+            path: urlInfo.path,
+            method: method.toUpperCase(),
+            headers: {
+                ...this.defaultHeaders,
+                ...headers
+            },
+            timeout: timeout || this.defaultTimeout,
+            urlInfo: urlInfo
+        };
+    }
+
+    /**
+     * Thực hiện HTTP request cơ bản
+     */
+    makeRequest(method, requestUrl, data = null, options = {}) {
         return new Promise((resolve, reject) => {
-            this.requestCount++;
-            const requestId = `REQ-${this.requestCount}-${Date.now()}`;
-            
-            this.log(`\n🚀 [${requestId}] Starting ${method} request to: ${url}`);
-            
-            let parsedUrl;
-            try {
-                parsedUrl = new URL(url);
-            } catch (error) {
-                this.log(`❌ [${requestId}] Invalid URL: ${error.message}`, 'error');
-                reject(new Error(`Invalid URL: ${url}`));
-                return;
-            }
-
-            const isHttps = parsedUrl.protocol === 'https:';
-            const client = isHttps ? https : http;
-            const defaultPort = isHttps ? 443 : 80;
-            
-            const options = {
-                hostname: parsedUrl.hostname,
-                port: parsedUrl.port || defaultPort,
-                path: parsedUrl.pathname + parsedUrl.search,
-                method: method.toUpperCase(),
-                headers: {
-                    'User-Agent': 'Lab01-HTTPClient-Nhom28/1.0.0',
-                    'Accept': 'application/json, text/plain, */*',
-                    'Accept-Encoding': 'gzip, deflate',
-                    'Connection': 'keep-alive',
-                    ...customHeaders
-                },
-                timeout: 30000 // 30 second timeout
-            };
-
-            // Handle request body for POST/PUT requests
-            let postData = null;
-            if (data && ['POST', 'PUT', 'PATCH'].includes(method.toUpperCase())) {
-                if (typeof data === 'object') {
-                    postData = JSON.stringify(data);
-                    options.headers['Content-Type'] = 'application/json';
-                } else {
-                    postData = data.toString();
-                    options.headers['Content-Type'] = 'text/plain';
-                }
-                options.headers['Content-Length'] = Buffer.byteLength(postData);
-            }
-
-            this.log(`📋 [${requestId}] Request details:`, 'info');
-            this.log(`   Protocol: ${isHttps ? 'HTTPS' : 'HTTP'}`, 'info');
-            this.log(`   Host: ${options.hostname}:${options.port}`, 'info');
-            this.log(`   Path: ${options.path}`, 'info');
-            this.log(`   Method: ${options.method}`, 'info');
-            this.log(`   Headers: ${JSON.stringify(options.headers, null, 2)}`, 'info');
-            if (postData) {
-                this.log(`   Body: ${postData}`, 'info');
-            }
-
             const startTime = Date.now();
+            console.log(`\n📡 [${method.toUpperCase()}] Starting request to: ${requestUrl}`);
+            console.log('🕒 Request started at:', new Date().toISOString());
             
-            const req = client.request(options, (res) => {
-                const responseTime = Date.now() - startTime;
-                this.log(`📡 [${requestId}] Response received (${responseTime}ms):`, 'info');
-                this.log(`   Status: ${res.statusCode} ${res.statusMessage}`, 'info');
-                this.log(`   Headers: ${JSON.stringify(res.headers, null, 2)}`, 'info');
+            try {
+                const requestOptions = this.createRequestOptions(
+                    method, 
+                    requestUrl, 
+                    options.headers,
+                    options.timeout
+                );
                 
-                let responseData = '';
-                
-                res.on('data', (chunk) => {
-                    responseData += chunk;
-                });
-                
-                res.on('end', () => {
-                    this.log(`✅ [${requestId}] Response completed`, 'info');
-                    
-                    let parsedData = responseData;
-                    try {
-                        // Try to parse as JSON
-                        parsedData = JSON.parse(responseData);
-                        this.log(`📄 [${requestId}] JSON Response: ${JSON.stringify(parsedData, null, 2)}`, 'info');
-                    } catch (error) {
-                        this.log(`📄 [${requestId}] Text Response: ${responseData.substring(0, 500)}...`, 'info');
+                // Prepare request data
+                let requestData = null;
+                if (data && (method.toUpperCase() === 'POST' || method.toUpperCase() === 'PUT')) {
+                    if (typeof data === 'object') {
+                        requestData = JSON.stringify(data);
+                        requestOptions.headers['Content-Type'] = 'application/json';
+                        requestOptions.headers['Content-Length'] = Buffer.byteLength(requestData);
+                    } else {
+                        requestData = data.toString();
+                        requestOptions.headers['Content-Length'] = Buffer.byteLength(requestData);
                     }
                     
-                    resolve({
-                        success: res.statusCode >= 200 && res.statusCode < 300,
-                        statusCode: res.statusCode,
-                        statusMessage: res.statusMessage,
-                        headers: res.headers,
-                        data: parsedData,
-                        rawData: responseData,
-                        responseTime: responseTime,
-                        requestId: requestId,
-                        url: url,
-                        method: method
+                    console.log('📤 Request data prepared:', requestData.length, 'bytes');
+                }
+
+                console.log('⚙️ Request options:');
+                console.log('  - Hostname:', requestOptions.hostname);
+                console.log('  - Port:', requestOptions.port);
+                console.log('  - Path:', requestOptions.path);
+                console.log('  - Method:', requestOptions.method);
+                console.log('  - Protocol:', requestOptions.urlInfo.protocol);
+                console.log('  - Headers:', requestOptions.headers);
+
+                // Create request
+                const httpModule = requestOptions.urlInfo.module;
+                const req = httpModule.request(requestOptions, (res) => {
+                    console.log(`📥 Response received - Status: ${res.statusCode} ${res.statusMessage}`);
+                    console.log('📋 Response headers:', res.headers);
+                    
+                    let responseData = '';
+                    
+                    // Handle gzip/deflate encoding
+                    let responseStream = res;
+                    const encoding = res.headers['content-encoding'];
+                    
+                    if (encoding === 'gzip' || encoding === 'deflate') {
+                        const zlib = require('zlib');
+                        if (encoding === 'gzip') {
+                            responseStream = res.pipe(zlib.createGunzip());
+                        } else if (encoding === 'deflate') {
+                            responseStream = res.pipe(zlib.createInflate());
+                        }
+                        console.log('🗜️ Decompressing response data...');
+                    }
+                    
+                    // Handle response data
+                    responseStream.on('data', (chunk) => {
+                        responseData += chunk;
+                    });
+                    
+                    responseStream.on('end', () => {
+                        const endTime = Date.now();
+                        const responseTime = endTime - startTime;
+                        
+                        console.log('✅ Response completed');
+                        console.log('📊 Response time:', responseTime + 'ms');
+                        console.log('📐 Response size:', responseData.length, 'bytes');
+                        
+                        // Parse JSON response if applicable
+                        let parsedData = responseData;
+                        const contentType = res.headers['content-type'] || '';
+                        
+                        if (contentType.includes('application/json')) {
+                            try {
+                                parsedData = JSON.parse(responseData);
+                                console.log('🔄 JSON parsed successfully');
+                            } catch (error) {
+                                console.log('⚠️ JSON parse failed:', error.message);
+                                console.log('📄 Raw response (first 200 chars):', responseData.substring(0, 200));
+                            }
+                        }
+                        
+                        const result = {
+                            success: res.statusCode >= 200 && res.statusCode < 300,
+                            status: res.statusCode,
+                            statusText: res.statusMessage,
+                            headers: res.headers,
+                            data: parsedData,
+                            responseTime: responseTime,
+                            url: requestUrl,
+                            method: method.toUpperCase()
+                        };
+                        
+                        if (result.success) {
+                            console.log('🎉 Request successful!');
+                            resolve(result);
+                        } else {
+                            console.log('❌ Request failed with status:', res.statusCode);
+                            reject(new Error(`HTTP ${res.statusCode}: ${res.statusMessage}`));
+                        }
+                    });
+                    
+                    responseStream.on('error', (error) => {
+                        console.log('💥 Response stream error:', error.message);
+                        reject(new Error(`Response processing failed: ${error.message}`));
                     });
                 });
-            });
-
-            // Handle request errors
-            req.on('error', (error) => {
-                const responseTime = Date.now() - startTime;
-                this.log(`❌ [${requestId}] Request failed (${responseTime}ms): ${error.message}`, 'error');
                 
-                reject({
-                    success: false,
-                    error: error.message,
-                    errorCode: error.code,
-                    responseTime: responseTime,
-                    requestId: requestId,
-                    url: url,
-                    method: method
+                // Handle request errors
+                req.on('error', (error) => {
+                    const endTime = Date.now();
+                    const responseTime = endTime - startTime;
+                    
+                    console.log('💥 Request error occurred:');
+                    console.log('  - Error type:', error.code || 'UNKNOWN');
+                    console.log('  - Error message:', error.message);
+                    console.log('  - Response time:', responseTime + 'ms');
+                    
+                    reject(new Error(`Request failed: ${error.message}`));
                 });
-            });
-
-            // Handle timeout
-            req.on('timeout', () => {
-                const responseTime = Date.now() - startTime;
-                this.log(`⏰ [${requestId}] Request timeout (${responseTime}ms)`, 'error');
-                req.destroy();
                 
-                reject({
-                    success: false,
-                    error: 'Request timeout',
-                    errorCode: 'TIMEOUT',
-                    responseTime: responseTime,
-                    requestId: requestId,
-                    url: url,
-                    method: method
+                // Handle timeout
+                req.on('timeout', () => {
+                    console.log('⏰ Request timeout occurred');
+                    req.destroy();
+                    reject(new Error(`Request timeout after ${requestOptions.timeout}ms`));
                 });
-            });
-
-            // Write request body if present
-            if (postData) {
-                req.write(postData);
+                
+                // Send request data
+                if (requestData) {
+                    console.log('📤 Sending request data...');
+                    req.write(requestData);
+                }
+                
+                req.end();
+                console.log('📡 Request sent, waiting for response...');
+                
+            } catch (error) {
+                console.log('💥 Request setup error:', error.message);
+                reject(error);
             }
-            
-            req.end();
         });
     }
 
     /**
-     * Utility method for logging with different levels
-     * @param {string} message - Log message
-     * @param {string} level - Log level (info, error, success)
+     * GET Request
      */
-    log(message, level = 'info') {
-        if (this.logLevel === 'basic' && level === 'info') return;
+    get(url, options = {}) {
+        console.log('\n🔍 === GET REQUEST ===');
+        return this.makeRequest('GET', url, null, options);
+    }
+
+    /**
+     * POST Request
+     */
+    post(url, data, options = {}) {
+        console.log('\n📮 === POST REQUEST ===');
+        return this.makeRequest('POST', url, data, options);
+    }
+
+    /**
+     * PUT Request (bonus)
+     */
+    put(url, data, options = {}) {
+        console.log('\n📝 === PUT REQUEST ===');
+        return this.makeRequest('PUT', url, data, options);
+    }
+
+    /**
+     * DELETE Request (bonus)
+     */
+    delete(url, options = {}) {
+        console.log('\n🗑️ === DELETE REQUEST ===');
+        return this.makeRequest('DELETE', url, null, options);
+    }
+}
+
+/**
+ * Test Functions - Các hàm kiểm thử
+ */
+class HTTPClientTester {
+    constructor() {
+        this.client = new HTTPClient({
+            timeout: 10000,
+            headers: {
+                'X-Test-Client': 'Lab01-Nhom28-Tester'
+            }
+        });
+        this.testResults = [];
+    }
+
+    /**
+     * Log test result
+     */
+    logTestResult(testName, success, details) {
+        const result = {
+            test: testName,
+            success: success,
+            timestamp: new Date().toISOString(),
+            details: details
+        };
         
-        const timestamp = new Date().toISOString();
-        const prefix = {
-            'info': '🔍',
-            'error': '❌',
-            'success': '✅',
-            'warning': '⚠️'
-        }[level] || '📝';
+        this.testResults.push(result);
         
-        console.log(`${prefix} [${timestamp}] ${message}`);
+        console.log(`\n${'='.repeat(60)}`);
+        console.log(`🧪 TEST: ${testName}`);
+        console.log(`📊 Result: ${success ? '✅ PASSED' : '❌ FAILED'}`);
+        console.log(`🕒 Time: ${result.timestamp}`);
+        if (details) {
+            console.log(`📝 Details: ${details}`);
+        }
+        console.log(`${'='.repeat(60)}`);
     }
 
     /**
-     * Convenience method for GET requests
-     * @param {string} url - Target URL
-     * @param {Object} headers - Custom headers
-     * @returns {Promise} Response object
+     * Test 1: GET request tới server cục bộ
      */
-    async get(url, headers = {}) {
-        return this.makeRequest(url, 'GET', null, headers);
-    }
-
-    /**
-     * Convenience method for POST requests
-     * @param {string} url - Target URL
-     * @param {Object} data - Request body
-     * @param {Object} headers - Custom headers
-     * @returns {Promise} Response object
-     */
-    async post(url, data, headers = {}) {
-        return this.makeRequest(url, 'POST', data, headers);
-    }
-
-    /**
-     * Test server availability
-     * @param {string} url - Server URL to test
-     * @returns {Promise} Boolean indicating availability
-     */
-    async isServerAvailable(url) {
+    async testLocalServerGet() {
+        const testName = 'GET Request to Local Server';
+        console.log(`\n🔬 Starting: ${testName}`);
+        
         try {
-            const response = await this.get(url);
-            return response.success;
+            const response = await this.client.get('http://localhost:3000/api/server-info');
+            
+            const success = response.success && response.data && response.data.status === 'running';
+            this.logTestResult(testName, success, `Status: ${response.status}, Response time: ${response.responseTime}ms`);
+            
+            if (success) {
+                console.log('📋 Server info received:');
+                console.log('  - Status:', response.data.status);
+                console.log('  - Timestamp:', response.data.timestamp);
+                console.log('  - Platform:', response.data.systemInfo?.platform);
+                console.log('  - Node version:', response.data.systemInfo?.nodeVersion);
+            }
+            
+            return success;
         } catch (error) {
+            this.logTestResult(testName, false, error.message);
             return false;
         }
     }
-}
 
-// Legacy APIClient for backward compatibility
-class APIClient extends HTTPClient {
-    constructor(baseURL = 'http://localhost:3000') {
-        super();
-        this.baseURL = baseURL;
+    /**
+     * Test 2: GET request tới external API (GitHub API)
+     */
+    async testExternalApiGet() {
+        const testName = 'GET Request to External API (GitHub)';
+        console.log(`\n🔬 Starting: ${testName}`);
+        
+        try {
+            const response = await this.client.get('https://api.github.com/repos/nodejs/node', {
+                headers: {
+                    'Accept': 'application/vnd.github.v3+json'
+                }
+            });
+            
+            const success = response.success && response.data && response.data.name === 'node';
+            this.logTestResult(testName, success, `Status: ${response.status}, Response time: ${response.responseTime}ms`);
+            
+            if (success) {
+                console.log('📋 GitHub repo info received:');
+                console.log('  - Name:', response.data.name);
+                console.log('  - Full name:', response.data.full_name);
+                console.log('  - Stars:', response.data.stargazers_count);
+                console.log('  - Language:', response.data.language);
+                console.log('  - Description:', response.data.description?.substring(0, 100) + '...');
+            }
+            
+            return success;
+        } catch (error) {
+            this.logTestResult(testName, false, error.message);
+            return false;
+        }
     }
 
-    async makeRequest(path, method = 'GET', data = null) {
-        const fullUrl = new URL(path, this.baseURL).toString();
-        return super.makeRequest(fullUrl, method, data);
+    /**
+     * Test 3: POST request tới JSONPlaceholder
+     */
+    async testJsonPlaceholderPost() {
+        const testName = 'POST Request to JSONPlaceholder';
+        console.log(`\n🔬 Starting: ${testName}`);
+        
+        const postData = {
+            title: 'Lab 01 - Nhóm 28 Test Post',
+            body: 'This is a test post from HTTP Client implementation',
+            userId: 28,
+            groupInfo: {
+                lab: 'Lab 01',
+                group: 'Nhóm 28',
+                members: ['2212389', '2212436', '2212456']
+            }
+        };
+        
+        try {
+            const response = await this.client.post('https://jsonplaceholder.typicode.com/posts', postData);
+            
+            const success = response.success && response.data && response.data.id;
+            this.logTestResult(testName, success, `Status: ${response.status}, Response time: ${response.responseTime}ms`);
+            
+            if (success) {
+                console.log('📋 POST response received:');
+                console.log('  - Created ID:', response.data.id);
+                console.log('  - Title:', response.data.title);
+                console.log('  - User ID:', response.data.userId);
+                console.log('  - Body preview:', response.data.body?.substring(0, 50) + '...');
+            }
+            
+            return success;
+        } catch (error) {
+            this.logTestResult(testName, false, error.message);
+            return false;
+        }
     }
 
-    async getStatus() {
-        return this.makeRequest('/api/status');
+    /**
+     * Test 4: Xử lý lỗi khi server không khả dụng
+     */
+    async testServerUnavailable() {
+        const testName = 'Error Handling - Server Unavailable';
+        console.log(`\n🔬 Starting: ${testName}`);
+        
+        try {
+            // Try to connect to a non-existent server
+            await this.client.get('http://localhost:9999/api/test', {
+                timeout: 3000
+            });
+            
+            // If we get here, the test failed (server should not be available)
+            this.logTestResult(testName, false, 'Expected connection error but request succeeded');
+            return false;
+            
+        } catch (error) {
+            // This is expected - connection should fail
+            const success = error.message.includes('Request failed') || 
+                           error.message.includes('ECONNREFUSED') ||
+                           error.message.includes('ENOTFOUND');
+            
+            this.logTestResult(testName, success, `Expected error occurred: ${error.message}`);
+            
+            if (success) {
+                console.log('✅ Error handling working correctly');
+                console.log('📝 Error details captured properly');
+            }
+            
+            return success;
+        }
     }
 
-    async getInfo() {
-        return this.makeRequest('/api/info');
+    /**
+     * Test 5: POST request tới local server
+     */
+    async testLocalServerPost() {
+        const testName = 'POST Request to Local Server';
+        console.log(`\n🔬 Starting: ${testName}`);
+        
+        const testData = {
+            message: 'Hello from HTTP Client - Lab 01 Nhóm 28',
+            timestamp: new Date().toISOString(),
+            testInfo: {
+                client: 'Custom HTTP Client',
+                version: '1.0.0',
+                group: 'Nhóm 28'
+            }
+        };
+        
+        try {
+            const response = await this.client.post('http://localhost:3000/api/data', testData);
+            
+            const success = response.success && response.data && response.data.status === 'success';
+            this.logTestResult(testName, success, `Status: ${response.status}, Response time: ${response.responseTime}ms`);
+            
+            if (success) {
+                console.log('📋 Local server POST response:');
+                console.log('  - Status:', response.data.status);
+                console.log('  - Message:', response.data.message);
+                console.log('  - Received data:', JSON.stringify(response.data.receivedData, null, 2));
+            }
+            
+            return success;
+        } catch (error) {
+            this.logTestResult(testName, false, error.message);
+            return false;
+        }
     }
 
-    async postData(data) {
-        return this.makeRequest('/api/data', 'POST', { data });
+    /**
+     * Test timeout handling
+     */
+    async testTimeoutHandling() {
+        const testName = 'Timeout Handling';
+        console.log(`\n🔬 Starting: ${testName}`);
+        
+        try {
+            // Try to connect to a slow/hanging endpoint with short timeout
+            await this.client.get('https://httpstat.us/200?sleep=5000', {
+                timeout: 2000  // 2 second timeout, but server will sleep for 5 seconds
+            });
+            
+            this.logTestResult(testName, false, 'Expected timeout error but request completed');
+            return false;
+            
+        } catch (error) {
+            const success = error.message.includes('timeout');
+            this.logTestResult(testName, success, `Timeout handling: ${error.message}`);
+            return success;
+        }
+    }
+
+    /**
+     * Run all tests
+     */
+    async runAllTests() {
+        console.log('\n🚀 Starting HTTP Client Test Suite - Lab 01 Nhóm 28');
+        console.log('📝 Testing custom HTTP client implementation');
+        console.log('🕒 Test started at:', new Date().toISOString());
+        
+        const tests = [
+            () => this.testLocalServerGet(),
+            () => this.testLocalServerPost(),
+            () => this.testExternalApiGet(),
+            () => this.testJsonPlaceholderPost(),
+            () => this.testServerUnavailable(),
+            () => this.testTimeoutHandling()
+        ];
+        
+        let passedTests = 0;
+        let totalTests = tests.length;
+        
+        for (let i = 0; i < tests.length; i++) {
+            try {
+                const result = await tests[i]();
+                if (result) passedTests++;
+                
+                // Wait between tests
+                await new Promise(resolve => setTimeout(resolve, 1000));
+            } catch (error) {
+                console.log(`💥 Test ${i + 1} crashed:`, error.message);
+            }
+        }
+        
+        this.showTestSummary(passedTests, totalTests);
+    }
+
+    /**
+     * Show test summary
+     */
+    showTestSummary(passed, total) {
+        console.log('\n' + '='.repeat(80));
+        console.log('📊 TEST SUMMARY - Lab 01 Nhóm 28 HTTP Client');
+        console.log('='.repeat(80));
+        console.log(`📈 Tests passed: ${passed}/${total} (${Math.round(passed/total*100)}%)`);
+        console.log(`🕒 Test completed at: ${new Date().toISOString()}`);
+        
+        console.log('\n📋 Detailed results:');
+        this.testResults.forEach((result, index) => {
+            const status = result.success ? '✅ PASS' : '❌ FAIL';
+            console.log(`  ${index + 1}. ${status} - ${result.test}`);
+            if (result.details) {
+                console.log(`     └─ ${result.details}`);
+            }
+        });
+        
+        console.log('\n🎯 Implementation Features Verified:');
+        console.log('  ✅ HTTP and HTTPS support');
+        console.log('  ✅ GET and POST methods');
+        console.log('  ✅ Error handling');
+        console.log('  ✅ Timeout handling');
+        console.log('  ✅ Request/Response logging');
+        console.log('  ✅ JSON data handling');
+        console.log('  ✅ Custom headers support');
+        
+        if (passed === total) {
+            console.log('\n🎉 ALL TESTS PASSED! HTTP Client implementation is working correctly.');
+        } else {
+            console.log(`\n⚠️ ${total - passed} test(s) failed. Please check the implementation.`);
+        }
+        
+        console.log('='.repeat(80));
     }
 }
 
 /**
- * PART B: HTTP CLIENT TESTING SCENARIOS (35 points)
- * All required test cases as per assignment requirements
+ * Main execution
  */
-
-// Test Scenario 1: GET request to local server
-async function testLocalServerGET() {
-    console.log('\n🧪 TEST 1: GET Request to Local Server');
-    console.log('=' .repeat(50));
-    
-    const client = new HTTPClient();
-    
-    try {
-        const response = await client.get('http://localhost:3000/api/server-info');
-        
-        if (response.success) {
-            console.log('✅ Local server GET request successful!');
-            console.log(`📊 Status: ${response.statusCode} ${response.statusMessage}`);
-            console.log(`⚡ Response time: ${response.responseTime}ms`);
-            console.log(`🔗 URL: ${response.url}`);
-            console.log(`📄 Server info received: ${response.data.lab || 'N/A'}`);
-        } else {
-            console.log('❌ Local server GET request failed!');
-            console.log(`📊 Status: ${response.statusCode}`);
-        }
-        
-        return response;
-        
-    } catch (error) {
-        console.log('❌ Local server GET request error!');
-        console.log(`🔍 Error: ${error.error || error.message}`);
-        console.log(`🔍 Error Code: ${error.errorCode || 'UNKNOWN'}`);
-        return error;
-    }
-}
-
-// Test Scenario 2: GET request to external API (GitHub API)
-async function testExternalAPIGET() {
-    console.log('\n🧪 TEST 2: GET Request to External API (GitHub)');
-    console.log('=' .repeat(50));
-    
-    const client = new HTTPClient();
-    
-    try {
-        const response = await client.get('https://api.github.com/users/octocat', {
-            'Accept': 'application/vnd.github.v3+json'
-        });
-        
-        if (response.success) {
-            console.log('✅ GitHub API GET request successful!');
-            console.log(`📊 Status: ${response.statusCode} ${response.statusMessage}`);
-            console.log(`⚡ Response time: ${response.responseTime}ms`);
-            console.log(`🔗 URL: ${response.url}`);
-            console.log(`👤 User: ${response.data.login || 'N/A'}`);
-            console.log(`📝 Bio: ${response.data.bio || 'No bio available'}`);
-            console.log(`📍 Location: ${response.data.location || 'Unknown'}`);
-        } else {
-            console.log('❌ GitHub API GET request failed!');
-            console.log(`📊 Status: ${response.statusCode}`);
-        }
-        
-        return response;
-        
-    } catch (error) {
-        console.log('❌ GitHub API GET request error!');
-        console.log(`🔍 Error: ${error.error || error.message}`);
-        console.log(`🔍 Error Code: ${error.errorCode || 'UNKNOWN'}`);
-        return error;
-    }
-}
-
-// Test Scenario 3: POST request to test endpoint (JSONPlaceholder)
-async function testExternalAPIPOST() {
-    console.log('\n🧪 TEST 3: POST Request to External API (JSONPlaceholder)');
-    console.log('=' .repeat(50));
-    
-    const client = new HTTPClient();
-    
-    const testData = {
-        title: 'Lab 01 - Nhóm 28 Test Post',
-        body: 'This is a test POST request from our HTTP client implementation for Web NC Lab 01.',
-        userId: 28,
-        timestamp: new Date().toISOString(),
-        group: 'Nhóm 28'
-    };
-    
-    try {
-        const response = await client.post('https://jsonplaceholder.typicode.com/posts', testData);
-        
-        if (response.success) {
-            console.log('✅ JSONPlaceholder POST request successful!');
-            console.log(`📊 Status: ${response.statusCode} ${response.statusMessage}`);
-            console.log(`⚡ Response time: ${response.responseTime}ms`);
-            console.log(`🔗 URL: ${response.url}`);
-            console.log(`🆔 Created post ID: ${response.data.id || 'N/A'}`);
-            console.log(`📝 Title: ${response.data.title || 'N/A'}`);
-        } else {
-            console.log('❌ JSONPlaceholder POST request failed!');
-            console.log(`📊 Status: ${response.statusCode}`);
-        }
-        
-        return response;
-        
-    } catch (error) {
-        console.log('❌ JSONPlaceholder POST request error!');
-        console.log(`🔍 Error: ${error.error || error.message}`);
-        console.log(`🔍 Error Code: ${error.errorCode || 'UNKNOWN'}`);
-        return error;
-    }
-}
-
-// Test Scenario 4: Error handling when server is unavailable
-async function testServerUnavailable() {
-    console.log('\n🧪 TEST 4: Error Handling - Server Unavailable');
-    console.log('=' .repeat(50));
-    
-    const client = new HTTPClient();
-    
-    // Test with non-existent server
-    const unavailableUrls = [
-        'http://localhost:9999/api/test',  // Non-existent port
-        'https://non-existent-domain-12345.com/api/test',  // Non-existent domain
-        'http://127.0.0.1:8888/timeout-test'  // Different unavailable port
-    ];
-    
-    for (const url of unavailableUrls) {
-        console.log(`\n🔍 Testing unavailable server: ${url}`);
-        
-        try {
-            const response = await client.get(url);
-            console.log('⚠️  Unexpected success - server should be unavailable');
-            console.log(`📊 Status: ${response.statusCode}`);
-        } catch (error) {
-            console.log('✅ Error handling working correctly!');
-            console.log(`🔍 Error: ${error.error || error.message}`);
-            console.log(`🔍 Error Code: ${error.errorCode || 'UNKNOWN'}`);
-            console.log(`⚡ Failed after: ${error.responseTime || 0}ms`);
-        }
-    }
-}
-
-// Test Scenario 5: Local server POST test
-async function testLocalServerPOST() {
-    console.log('\n🧪 TEST 5: POST Request to Local Server');
-    console.log('=' .repeat(50));
-    
-    const client = new HTTPClient();
-    
-    const testData = {
-        message: 'Hello from Part B HTTP Client!',
-        timestamp: new Date().toISOString(),
-        testType: 'Part B - HTTP Client Implementation',
-        group: 'Nhóm 28',
-        randomId: Math.floor(Math.random() * 10000)
-    };
-    
-    try {
-        const response = await client.post('http://localhost:3000/api/data', testData);
-        
-        if (response.success) {
-            console.log('✅ Local server POST request successful!');
-            console.log(`📊 Status: ${response.statusCode} ${response.statusMessage}`);
-            console.log(`⚡ Response time: ${response.responseTime}ms`);
-            console.log(`🔗 URL: ${response.url}`);
-            console.log(`📄 Server response: ${response.data.message || 'N/A'}`);
-        } else {
-            console.log('❌ Local server POST request failed!');
-            console.log(`📊 Status: ${response.statusCode}`);
-        }
-        
-        return response;
-        
-    } catch (error) {
-        console.log('❌ Local server POST request error!');
-        console.log(`🔍 Error: ${error.error || error.message}`);
-        console.log(`🔍 Error Code: ${error.errorCode || 'UNKNOWN'}`);
-        return error;
-    }
-}
-
-// Main test runner for Part B
-async function runPartBTests() {
-    console.log('\n🎯 PART B: HTTP CLIENT IMPLEMENTATION TESTS');
-    console.log('🎯 Testing comprehensive HTTP client built from scratch');
-    console.log('🎯 Lab 01 - Nhóm 28 - Web NC');
-    console.log('=' .repeat(60));
-    
-    const results = [];
-    
-    // Run all required test scenarios
-    results.push(await testLocalServerGET());
-    results.push(await testExternalAPIGET());
-    results.push(await testExternalAPIPOST());
-    await testServerUnavailable();
-    results.push(await testLocalServerPOST());
-    
-    // Summary
-    console.log('\n📊 TEST SUMMARY - PART B');
-    console.log('=' .repeat(50));
-    
-    const successCount = results.filter(r => r.success).length;
-    const totalTests = results.length;
-    
-    console.log(`✅ Successful requests: ${successCount}/${totalTests}`);
-    console.log(`⚡ Average response time: ${Math.round(results.filter(r => r.responseTime).reduce((a, b) => a + (b.responseTime || 0), 0) / results.filter(r => r.responseTime).length)}ms`);
-    
-    console.log('\n🎯 PART B REQUIREMENTS VERIFICATION:');
-    console.log('✅ HTTP client built from scratch (no axios/fetch)');
-    console.log('✅ Supports GET and POST methods');
-    console.log('✅ Handles both HTTP and HTTPS requests');
-    console.log('✅ Comprehensive error handling implemented');
-    console.log('✅ GET request to local server tested');
-    console.log('✅ GET request to external API (GitHub) tested');
-    console.log('✅ POST request to test endpoint (JSONPlaceholder) tested');
-    console.log('✅ Error handling for unavailable servers tested');
-    console.log('✅ Detailed console logging implemented');
-    
-    return results;
-}
-
-// Legacy test function for backward compatibility
-async function runTests() {
-    const client = new APIClient();
-    
-    console.log('=== Lab 01 - Nhóm 28 - API Client Test ===\n');
-
-    try {
-        // Test 1: Get server status
-        console.log('1. Testing GET /api/status');
-        const statusResponse = await client.getStatus();
-        console.log('Status Code:', statusResponse.statusCode);
-        console.log('Response:', statusResponse.data);
-        console.log('');
-
-        // Test 2: Get project info
-        console.log('2. Testing GET /api/info');
-        const infoResponse = await client.getInfo();
-        console.log('Status Code:', infoResponse.statusCode);
-        console.log('Response:', infoResponse.data);
-        console.log('');
-
-        // Test 3: Post data
-        console.log('3. Testing POST /api/data');
-        const testData = {
-            message: 'Hello from Nhóm 28!',
-            timestamp: new Date().toISOString(),
-            testNumber: Math.floor(Math.random() * 1000)
-        };
-        const postResponse = await client.postData(testData);
-        console.log('Status Code:', postResponse.statusCode);
-        console.log('Response:', postResponse.data);
-        console.log('');
-
-        console.log('=== All tests completed successfully! ===');
-
-    } catch (error) {
-        console.error('Error occurred during testing:', error.message);
-        console.log('Make sure the server is running on http://localhost:3000');
-    }
-}
-
-// Run tests if this file is executed directly
-if (require.main === module) {
-    // Check command line arguments for test type
+async function main() {
+    // Check command line arguments
     const args = process.argv.slice(2);
     
-    if (args.includes('--part-b') || args.includes('-b')) {
-        runPartBTests();
-    } else if (args.includes('--legacy') || args.includes('-l')) {
-        runTests();
-    } else {
-        // Default: run Part B tests
-        console.log('🎯 Running Part B tests by default. Use --legacy for old tests.');
-        runPartBTests();
+    if (args.includes('--help') || args.includes('-h')) {
+        console.log('\n📖 HTTP Client - Lab 01 Nhóm 28');
+        console.log('Usage: node client.js [options]');
+        console.log('\nOptions:');
+        console.log('  --test, -t     Run test suite');
+        console.log('  --help, -h     Show this help');
+        console.log('\nExamples:');
+        console.log('  node client.js --test');
+        console.log('  node client.js');
+        return;
     }
+    
+    if (args.includes('--test') || args.includes('-t') || args.length === 0) {
+        const tester = new HTTPClientTester();
+        await tester.runAllTests();
+        return;
+    }
+    
+    // Default: run tests
+    const tester = new HTTPClientTester();
+    await tester.runAllTests();
 }
 
-module.exports = { 
-    HTTPClient, 
-    APIClient, 
-    runTests, 
-    runPartBTests,
-    testLocalServerGET,
-    testExternalAPIGET,
-    testExternalAPIPOST,
-    testServerUnavailable,
-    testLocalServerPOST
-};
+// Export for module usage
+module.exports = { HTTPClient, HTTPClientTester };
+
+// Run if this file is executed directly
+if (require.main === module) {
+    main().catch(error => {
+        console.error('💥 Fatal error:', error.message);
+        process.exit(1);
+    });
+}

@@ -1,0 +1,625 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Network Traffic Monitor - Lab 01 Part C</title>
+    <link rel="stylesheet" href="/style.css">
+    <style>
+        .monitor-dashboard {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 2rem 0;
+        }
+
+        .dashboard-container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 0 1rem;
+        }
+
+        .dashboard-header {
+            text-align: center;
+            color: white;
+            margin-bottom: 2rem;
+        }
+
+        .dashboard-title {
+            font-size: 2.5rem;
+            margin-bottom: 0.5rem;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .dashboard-subtitle {
+            font-size: 1.2rem;
+            opacity: 0.9;
+        }
+
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .metric-card {
+            background: white;
+            border-radius: 15px;
+            padding: 1.5rem;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+            border-left: 5px solid #667eea;
+            transition: transform 0.3s ease;
+        }
+
+        .metric-card:hover {
+            transform: translateY(-5px);
+        }
+
+        .metric-header {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin-bottom: 1rem;
+        }
+
+        .metric-icon {
+            font-size: 1.5rem;
+        }
+
+        .metric-title {
+            font-size: 1.1rem;
+            font-weight: bold;
+            color: #333;
+        }
+
+        .metric-value {
+            font-size: 2rem;
+            font-weight: bold;
+            color: #667eea;
+            margin-bottom: 0.5rem;
+        }
+
+        .metric-description {
+            color: #666;
+            font-size: 0.9rem;
+        }
+
+        .chart-container {
+            background: white;
+            border-radius: 15px;
+            padding: 1.5rem;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+            margin-bottom: 2rem;
+        }
+
+        .chart-title {
+            font-size: 1.3rem;
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 1rem;
+            text-align: center;
+        }
+
+        .request-log {
+            max-height: 400px;
+            overflow-y: auto;
+            border: 1px solid #e9ecef;
+            border-radius: 8px;
+            padding: 1rem;
+        }
+
+        .request-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.5rem;
+            border-bottom: 1px solid #f0f0f0;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9rem;
+        }
+
+        .request-item:last-child {
+            border-bottom: none;
+        }
+
+        .request-method {
+            font-weight: bold;
+            padding: 0.2rem 0.5rem;
+            border-radius: 4px;
+            color: white;
+            min-width: 60px;
+            text-align: center;
+        }
+
+        .method-GET { background: #28a745; }
+        .method-POST { background: #007bff; }
+        .method-PUT { background: #ffc107; color: #000; }
+        .method-DELETE { background: #dc3545; }
+
+        .request-url {
+            flex: 1;
+            margin: 0 1rem;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .request-status {
+            font-weight: bold;
+            padding: 0.2rem 0.5rem;
+            border-radius: 4px;
+            min-width: 50px;
+            text-align: center;
+        }
+
+        .status-2xx { background: #d4edda; color: #155724; }
+        .status-3xx { background: #d1ecf1; color: #0c5460; }
+        .status-4xx { background: #f8d7da; color: #721c24; }
+        .status-5xx { background: #f5c6cb; color: #721c24; }
+
+        .request-time {
+            color: #667eea;
+            font-weight: bold;
+            min-width: 80px;
+            text-align: right;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 20px;
+            background: #e9ecef;
+            border-radius: 10px;
+            overflow: hidden;
+            margin: 0.5rem 0;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            transition: width 0.3s ease;
+            border-radius: 10px;
+        }
+
+        .control-panel {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+
+        .control-btn {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 0.75rem 1.5rem;
+            border-radius: 8px;
+            margin: 0 0.5rem;
+            cursor: pointer;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+        }
+
+        .control-btn:hover {
+            background: #5a67d8;
+            transform: translateY(-2px);
+        }
+
+        .control-btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .status-indicator {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 0.5rem;
+        }
+
+        .status-active { background: #28a745; }
+        .status-inactive { background: #dc3545; }
+
+        @media (max-width: 768px) {
+            .dashboard-container {
+                padding: 0 0.5rem;
+            }
+            
+            .metrics-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .dashboard-title {
+                font-size: 2rem;
+            }
+        }
+    </style>
+</head>
+<body class="monitor-dashboard">
+    <div class="dashboard-container">
+        <div class="dashboard-header">
+            <h1 class="dashboard-title">📊 Network Traffic Monitor</h1>
+            <p class="dashboard-subtitle">Lab 01 - Part C: Real-time Network Analysis - Nhóm 28</p>
+        </div>
+
+        <div class="control-panel">
+            <button id="startBtn" class="control-btn">🚀 Start Monitoring</button>
+            <button id="stopBtn" class="control-btn" disabled>🛑 Stop Monitoring</button>
+            <button id="clearBtn" class="control-btn">🧹 Clear Data</button>
+            <button id="testBtn" class="control-btn">🧪 Run Test</button>
+        </div>
+
+        <div class="metrics-grid">
+            <div class="metric-card">
+                <div class="metric-header">
+                    <span class="metric-icon">📡</span>
+                    <span class="metric-title">Total Requests</span>
+                    <span id="statusIndicator" class="status-indicator status-inactive"></span>
+                </div>
+                <div class="metric-value" id="totalRequests">0</div>
+                <div class="metric-description">All HTTP requests monitored</div>
+            </div>
+
+            <div class="metric-card">
+                <div class="metric-header">
+                    <span class="metric-icon">📱</span>
+                    <span class="metric-title">Static Requests</span>
+                </div>
+                <div class="metric-value" id="staticRequests">0</div>
+                <div class="metric-description">CSS, JS, Images, Fonts</div>
+                <div class="progress-bar">
+                    <div class="progress-fill" id="staticProgress" style="width: 0%"></div>
+                </div>
+            </div>
+
+            <div class="metric-card">
+                <div class="metric-header">
+                    <span class="metric-icon">🔄</span>
+                    <span class="metric-title">Dynamic Requests</span>
+                </div>
+                <div class="metric-value" id="dynamicRequests">0</div>
+                <div class="metric-description">API calls, AJAX, Real-time data</div>
+                <div class="progress-bar">
+                    <div class="progress-fill" id="dynamicProgress" style="width: 0%"></div>
+                </div>
+            </div>
+
+            <div class="metric-card">
+                <div class="metric-header">
+                    <span class="metric-icon">⚡</span>
+                    <span class="metric-title">Avg Response Time</span>
+                </div>
+                <div class="metric-value" id="avgResponseTime">0ms</div>
+                <div class="metric-description">Average server response time</div>
+            </div>
+
+            <div class="metric-card">
+                <div class="metric-header">
+                    <span class="metric-icon">📊</span>
+                    <span class="metric-title">Requests/Second</span>
+                </div>
+                <div class="metric-value" id="requestsPerSecond">0.0</div>
+                <div class="metric-description">Current request rate</div>
+            </div>
+
+            <div class="metric-card">
+                <div class="metric-header">
+                    <span class="metric-icon">❌</span>
+                    <span class="metric-title">Error Rate</span>
+                </div>
+                <div class="metric-value" id="errorRate">0%</div>
+                <div class="metric-description">Failed requests percentage</div>
+            </div>
+        </div>
+
+        <div class="chart-container">
+            <h2 class="chart-title">📝 Real-time Request Log</h2>
+            <div class="request-log" id="requestLog">
+                <div style="text-align: center; color: #666; padding: 2rem;">
+                    No requests monitored yet. Start monitoring to see real-time data.
+                </div>
+            </div>
+        </div>
+
+        <div class="actions" style="text-align: center; margin-top: 2rem;">
+            <a href="/" class="control-btn">🏠 Back to Home</a>
+            <a href="/api/server-info" class="control-btn">📄 Server Info</a>
+        </div>
+    </div>
+
+    <script>
+        class NetworkTrafficDashboard {
+            constructor() {
+                this.isMonitoring = false;
+                this.requestHistory = [];
+                this.statistics = {
+                    totalRequests: 0,
+                    staticRequests: 0,
+                    dynamicRequests: 0,
+                    avgResponseTime: 0,
+                    requestsPerSecond: 0,
+                    errorRate: 0
+                };
+                
+                this.setupEventListeners();
+                this.updateDisplay();
+            }
+
+            setupEventListeners() {
+                document.getElementById('startBtn').addEventListener('click', () => this.startMonitoring());
+                document.getElementById('stopBtn').addEventListener('click', () => this.stopMonitoring());
+                document.getElementById('clearBtn').addEventListener('click', () => this.clearData());
+                document.getElementById('testBtn').addEventListener('click', () => this.runTest());
+
+                // Intercept fetch requests to monitor them
+                this.hookFetchAPI();
+            }
+
+            hookFetchAPI() {
+                const originalFetch = window.fetch;
+                const dashboard = this;
+
+                window.fetch = function(...args) {
+                    const startTime = Date.now();
+                    const url = args[0];
+                    const options = args[1] || {};
+
+                    return originalFetch.apply(this, args).then(response => {
+                        const endTime = Date.now();
+                        const responseTime = endTime - startTime;
+
+                        if (dashboard.isMonitoring) {
+                            dashboard.logRequest({
+                                method: options.method || 'GET',
+                                url: url,
+                                status: response.status,
+                                responseTime: responseTime,
+                                timestamp: new Date()
+                            });
+                        }
+
+                        return response;
+                    }).catch(error => {
+                        const endTime = Date.now();
+                        const responseTime = endTime - startTime;
+
+                        if (dashboard.isMonitoring) {
+                            dashboard.logRequest({
+                                method: options.method || 'GET',
+                                url: url,
+                                status: 0,
+                                responseTime: responseTime,
+                                timestamp: new Date(),
+                                error: error.message
+                            });
+                        }
+
+                        throw error;
+                    });
+                };
+            }
+
+            startMonitoring() {
+                this.isMonitoring = true;
+                document.getElementById('startBtn').disabled = true;
+                document.getElementById('stopBtn').disabled = false;
+                document.getElementById('statusIndicator').className = 'status-indicator status-active';
+
+                console.log('🚀 Network monitoring started');
+                
+                // Start periodic updates
+                this.updateInterval = setInterval(() => {
+                    this.updateStatistics();
+                    this.updateDisplay();
+                }, 1000);
+
+                this.logMessage('Monitoring started', 'info');
+            }
+
+            stopMonitoring() {
+                this.isMonitoring = false;
+                document.getElementById('startBtn').disabled = false;
+                document.getElementById('stopBtn').disabled = true;
+                document.getElementById('statusIndicator').className = 'status-indicator status-inactive';
+
+                if (this.updateInterval) {
+                    clearInterval(this.updateInterval);
+                }
+
+                console.log('🛑 Network monitoring stopped');
+                this.logMessage('Monitoring stopped', 'info');
+            }
+
+            clearData() {
+                this.requestHistory = [];
+                this.statistics = {
+                    totalRequests: 0,
+                    staticRequests: 0,
+                    dynamicRequests: 0,
+                    avgResponseTime: 0,
+                    requestsPerSecond: 0,
+                    errorRate: 0
+                };
+
+                this.updateDisplay();
+                document.getElementById('requestLog').innerHTML = `
+                    <div style="text-align: center; color: #666; padding: 2rem;">
+                        Data cleared. Start monitoring to see real-time data.
+                    </div>
+                `;
+
+                console.log('🧹 Data cleared');
+            }
+
+            async runTest() {
+                if (!this.isMonitoring) {
+                    alert('Please start monitoring first!');
+                    return;
+                }
+
+                console.log('🧪 Running network test...');
+                this.logMessage('Running test scenario...', 'info');
+
+                const testRequests = [
+                    { url: '/', description: 'Homepage' },
+                    { url: '/style.css', description: 'CSS file' },
+                    { url: '/script.js', description: 'JavaScript file' },
+                    { url: '/api/server-info?format=json', description: 'API endpoint' },
+                    { url: '/api/status', description: 'Status API' },
+                    { url: '/nonexistent', description: '404 test' }
+                ];
+
+                for (let i = 0; i < testRequests.length; i++) {
+                    const req = testRequests[i];
+                    this.logMessage(`Testing: ${req.description}`, 'test');
+                    
+                    try {
+                        await fetch(req.url);
+                    } catch (error) {
+                        // Expected for 404 test
+                    }
+                    
+                    // Wait between requests
+                    await this.delay(500);
+                }
+
+                this.logMessage('Test completed', 'success');
+                console.log('✅ Network test completed');
+            }
+
+            logRequest(requestInfo) {
+                // Classify request type
+                requestInfo.type = this.classifyRequest(requestInfo.url);
+                
+                // Add to history
+                this.requestHistory.push(requestInfo);
+                
+                // Keep history manageable
+                if (this.requestHistory.length > 100) {
+                    this.requestHistory.shift();
+                }
+
+                // Update display
+                this.addRequestToLog(requestInfo);
+                this.updateStatistics();
+            }
+
+            classifyRequest(url) {
+                const staticExtensions = ['.css', '.js', '.png', '.jpg', '.jpeg', '.gif', '.ico', '.svg', '.woff', '.woff2'];
+                const dynamicPaths = ['/api/', '/data/', '/ajax/'];
+                
+                const isStatic = staticExtensions.some(ext => url.includes(ext));
+                const isDynamic = dynamicPaths.some(path => url.includes(path));
+                
+                if (isStatic) return 'static';
+                if (isDynamic) return 'dynamic';
+                
+                return url.includes('?') ? 'dynamic' : 'static';
+            }
+
+            addRequestToLog(requestInfo) {
+                const logContainer = document.getElementById('requestLog');
+                
+                // Clear placeholder text if present
+                if (logContainer.children.length === 1 && logContainer.children[0].style.textAlign === 'center') {
+                    logContainer.innerHTML = '';
+                }
+
+                const requestItem = document.createElement('div');
+                requestItem.className = 'request-item';
+
+                const statusClass = `status-${Math.floor(requestInfo.status / 100)}xx`;
+                const methodClass = `method-${requestInfo.method}`;
+
+                requestItem.innerHTML = `
+                    <span class="request-method ${methodClass}">${requestInfo.method}</span>
+                    <span class="request-url" title="${requestInfo.url}">${requestInfo.url}</span>
+                    <span class="request-status ${statusClass}">${requestInfo.status || 'ERR'}</span>
+                    <span class="request-time">${requestInfo.responseTime}ms</span>
+                `;
+
+                // Add to top of log
+                logContainer.insertBefore(requestItem, logContainer.firstChild);
+
+                // Remove old entries
+                while (logContainer.children.length > 50) {
+                    logContainer.removeChild(logContainer.lastChild);
+                }
+            }
+
+            logMessage(message, type = 'info') {
+                const logContainer = document.getElementById('requestLog');
+                
+                if (logContainer.children.length === 1 && logContainer.children[0].style.textAlign === 'center') {
+                    logContainer.innerHTML = '';
+                }
+
+                const messageItem = document.createElement('div');
+                messageItem.className = 'request-item';
+                messageItem.style.fontStyle = 'italic';
+                messageItem.style.background = type === 'error' ? '#f8d7da' : type === 'success' ? '#d4edda' : '#d1ecf1';
+
+                const icon = type === 'error' ? '❌' : type === 'success' ? '✅' : type === 'test' ? '🧪' : 'ℹ️';
+
+                messageItem.innerHTML = `
+                    <span>${icon}</span>
+                    <span style="flex: 1; margin-left: 1rem;">${message}</span>
+                    <span>${new Date().toLocaleTimeString()}</span>
+                `;
+
+                logContainer.insertBefore(messageItem, logContainer.firstChild);
+            }
+
+            updateStatistics() {
+                const recent = this.requestHistory.slice(-50); // Last 50 requests
+                
+                this.statistics.totalRequests = this.requestHistory.length;
+                this.statistics.staticRequests = this.requestHistory.filter(r => r.type === 'static').length;
+                this.statistics.dynamicRequests = this.requestHistory.filter(r => r.type === 'dynamic').length;
+
+                if (recent.length > 0) {
+                    this.statistics.avgResponseTime = recent.reduce((sum, r) => sum + r.responseTime, 0) / recent.length;
+                }
+
+                // Calculate requests per second (last 10 seconds)
+                const tenSecondsAgo = Date.now() - 10000;
+                const recentRequests = this.requestHistory.filter(r => r.timestamp.getTime() > tenSecondsAgo);
+                this.statistics.requestsPerSecond = recentRequests.length / 10;
+
+                // Calculate error rate
+                const errors = this.requestHistory.filter(r => r.status >= 400 || r.status === 0);
+                this.statistics.errorRate = this.statistics.totalRequests > 0 ? 
+                    (errors.length / this.statistics.totalRequests) * 100 : 0;
+            }
+
+            updateDisplay() {
+                document.getElementById('totalRequests').textContent = this.statistics.totalRequests;
+                document.getElementById('staticRequests').textContent = this.statistics.staticRequests;
+                document.getElementById('dynamicRequests').textContent = this.statistics.dynamicRequests;
+                document.getElementById('avgResponseTime').textContent = Math.round(this.statistics.avgResponseTime) + 'ms';
+                document.getElementById('requestsPerSecond').textContent = this.statistics.requestsPerSecond.toFixed(1);
+                document.getElementById('errorRate').textContent = this.statistics.errorRate.toFixed(1) + '%';
+
+                // Update progress bars
+                const total = this.statistics.totalRequests;
+                if (total > 0) {
+                    const staticPercent = (this.statistics.staticRequests / total) * 100;
+                    const dynamicPercent = (this.statistics.dynamicRequests / total) * 100;
+                    
+                    document.getElementById('staticProgress').style.width = staticPercent + '%';
+                    document.getElementById('dynamicProgress').style.width = dynamicPercent + '%';
+                }
+            }
+
+            delay(ms) {
+                return new Promise(resolve => setTimeout(resolve, ms));
+            }
+        }
+
+        // Initialize dashboard when page loads
+        document.addEventListener('DOMContentLoaded', () => {
+            new NetworkTrafficDashboard();
+            console.log('📊 Network Traffic Dashboard initialized');
+        });
+    </script>
+</body>
+</html>

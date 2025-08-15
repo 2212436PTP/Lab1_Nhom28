@@ -99,7 +99,7 @@ class APIClient {
 
     // Part A specific methods
     async getServerInfo() {
-        return this.makeRequest('/api/server-info');
+        return this.makeRequest('/api/server-info?format=json');
     }
 
     async getStatus() {

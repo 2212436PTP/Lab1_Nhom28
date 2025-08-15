@@ -1,0 +1,18 @@
+{
+  "summary": {
+    "totalRequests": 0,
+    "staticRequests": 0,
+    "dynamicRequests": 0,
+    "uptime": 8361,
+    "avgResponseTime": 0,
+    "errorRate": 0
+  },
+  "methodBreakdown": {},
+  "statusBreakdown": {},
+  "patterns": {},
+  "performance": {
+    "slowRequests": 0,
+    "fastestRequest": null,
+    "slowestRequest": null
+  }
+}

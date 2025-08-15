@@ -1,0 +1,346 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Server Information - Lab 01 Nhóm 28</title>
+    <link rel="stylesheet" href="/style.css">
+    <style>
+        .server-info-page {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 2rem 0;
+        }
+
+        .info-container {
+            max-width: 1000px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            padding: 2rem;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+        }
+
+        .server-status {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+
+        .status-badge {
+            display: inline-block;
+            background: #28a745;
+            color: white;
+            padding: 0.5rem 1rem;
+            border-radius: 25px;
+            font-weight: bold;
+            font-size: 1.1rem;
+            margin-bottom: 1rem;
+        }
+
+        .server-title {
+            color: #667eea;
+            font-size: 2.5rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .server-subtitle {
+            color: #6c757d;
+            font-size: 1.2rem;
+            margin-bottom: 2rem;
+        }
+
+        .info-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .info-section {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 1.5rem;
+            border-left: 4px solid #667eea;
+        }
+
+        .info-section h3 {
+            color: #667eea;
+            margin-bottom: 1rem;
+            font-size: 1.3rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .info-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 0.5rem 0;
+            border-bottom: 1px solid #e9ecef;
+        }
+
+        .info-item:last-child {
+            border-bottom: none;
+        }
+
+        .info-label {
+            font-weight: 600;
+            color: #495057;
+        }
+
+        .info-value {
+            color: #667eea;
+            font-family: 'Courier New', monospace;
+            font-weight: bold;
+        }
+
+        .timestamp-section {
+            background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%);
+            border-radius: 10px;
+            padding: 1.5rem;
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+
+        .live-time {
+            font-size: 2rem;
+            font-weight: bold;
+            color: #1976d2;
+            font-family: 'Courier New', monospace;
+            margin: 1rem 0;
+        }
+
+        .actions {
+            text-align: center;
+            margin-top: 2rem;
+        }
+
+        .btn {
+            background: #667eea;
+            color: white;
+            text-decoration: none;
+            padding: 0.75rem 1.5rem;
+            border-radius: 8px;
+            margin: 0 0.5rem;
+            display: inline-block;
+            transition: all 0.3s ease;
+        }
+
+        .btn:hover {
+            background: #5a67d8;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+        }
+
+        .btn-secondary {
+            background: #6c757d;
+        }
+
+        .btn-secondary:hover {
+            background: #5a6268;
+        }
+
+        .refresh-info {
+            text-align: center;
+            margin-top: 1rem;
+            color: #6c757d;
+            font-size: 0.9rem;
+        }
+
+        @media (max-width: 768px) {
+            .info-container {
+                margin: 1rem;
+                padding: 1rem;
+            }
+            
+            .server-title {
+                font-size: 2rem;
+            }
+            
+            .info-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body class="server-info-page">
+    <div class="info-container">
+        <div class="server-status">
+            <div class="status-badge" id="statusBadge">🟢 RUNNING</div>
+            <h1 class="server-title">Server Information</h1>
+            <p class="server-subtitle">Lab 01 - Nhóm 28 - Real-time Server Monitor</p>
+        </div>
+
+        <div class="timestamp-section">
+            <h3>⏰ Live Server Time</h3>
+            <div class="live-time" id="liveTime">--:--:--</div>
+            <p>Server Uptime: <span id="uptimeDisplay">-- seconds</span></p>
+        </div>
+
+        <div class="info-grid">
+            <div class="info-section">
+                <h3>🖥️ System Information</h3>
+                <div class="info-item">
+                    <span class="info-label">Platform:</span>
+                    <span class="info-value" id="platform">--</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">Architecture:</span>
+                    <span class="info-value" id="architecture">--</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">Node.js Version:</span>
+                    <span class="info-value" id="nodeVersion">--</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">CPU Cores:</span>
+                    <span class="info-value" id="cpuCount">--</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">Hostname:</span>
+                    <span class="info-value" id="hostname">--</span>
+                </div>
+            </div>
+
+            <div class="info-section">
+                <h3>💾 Memory Information</h3>
+                <div class="info-item">
+                    <span class="info-label">Total Memory:</span>
+                    <span class="info-value" id="totalMemory">--</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">Free Memory:</span>
+                    <span class="info-value" id="freeMemory">--</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">Memory Usage:</span>
+                    <span class="info-value" id="memoryUsage">--</span>
+                </div>
+            </div>
+
+            <div class="info-section">
+                <h3>⚙️ Server Details</h3>
+                <div class="info-item">
+                    <span class="info-label">Port:</span>
+                    <span class="info-value" id="serverPort">--</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">Environment:</span>
+                    <span class="info-value" id="environment">--</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">Process ID:</span>
+                    <span class="info-value" id="processId">--</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">Started:</span>
+                    <span class="info-value" id="serverStarted">--</span>
+                </div>
+            </div>
+
+            <div class="info-section">
+                <h3>👥 Project Information</h3>
+                <div class="info-item">
+                    <span class="info-label">Lab:</span>
+                    <span class="info-value">Lab 01 - Part A</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">Group:</span>
+                    <span class="info-value">Nhóm 28</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">Type:</span>
+                    <span class="info-value">Static Web Server</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="actions">
+            <a href="/" class="btn">🏠 Back to Home</a>
+            <a href="/api/server-info?format=json" class="btn btn-secondary">📄 View JSON</a>
+            <button onclick="refreshData()" class="btn">🔄 Refresh Data</button>
+        </div>
+
+        <div class="refresh-info">
+            <p>Last updated: <span id="lastUpdated">--</span></p>
+            <p>Auto-refresh every 30 seconds</p>
+        </div>
+    </div>
+
+    <script>
+        let serverData = null;
+
+        async function loadServerData() {
+            try {
+                const response = await fetch('/api/server-info?format=json');
+                serverData = await response.json();
+                updateDisplay();
+            } catch (error) {
+                console.error('Failed to load server data:', error);
+                document.getElementById('statusBadge').textContent = '🔴 ERROR';
+                document.getElementById('statusBadge').style.background = '#dc3545';
+            }
+        }
+
+        function updateDisplay() {
+            if (!serverData) return;
+
+            // System info
+            document.getElementById('platform').textContent = serverData.systemInfo.platform;
+            document.getElementById('architecture').textContent = serverData.systemInfo.architecture;
+            document.getElementById('nodeVersion').textContent = serverData.systemInfo.nodeVersion;
+            document.getElementById('cpuCount').textContent = serverData.systemInfo.cpuCount;
+            document.getElementById('hostname').textContent = serverData.systemInfo.hostname;
+
+            // Memory info
+            document.getElementById('totalMemory').textContent = serverData.systemInfo.totalMemory;
+            document.getElementById('freeMemory').textContent = serverData.systemInfo.freeMemory;
+            
+            // Calculate memory usage percentage
+            const total = parseFloat(serverData.systemInfo.totalMemory);
+            const free = parseFloat(serverData.systemInfo.freeMemory);
+            const used = total - free;
+            const percentage = Math.round((used / total) * 100);
+            document.getElementById('memoryUsage').textContent = percentage + '%';
+
+            // Server details
+            document.getElementById('serverPort').textContent = serverData.serverDetails.port;
+            document.getElementById('environment').textContent = serverData.serverDetails.environment;
+            document.getElementById('processId').textContent = serverData.serverDetails.processId;
+
+            // Update last refresh time
+            document.getElementById('lastUpdated').textContent = new Date().toLocaleString('vi-VN');
+        }
+
+        function updateLiveTime() {
+            const now = new Date();
+            document.getElementById('liveTime').textContent = now.toLocaleTimeString('vi-VN');
+            
+            // Update uptime if we have server data
+            if (serverData) {
+                const currentUptime = Math.floor(serverData.uptime) + Math.floor((Date.now() - new Date(serverData.timestamp).getTime()) / 1000);
+                const hours = Math.floor(currentUptime / 3600);
+                const minutes = Math.floor((currentUptime % 3600) / 60);
+                const seconds = currentUptime % 60;
+                document.getElementById('uptimeDisplay').textContent = `${hours}h ${minutes}m ${seconds}s`;
+            }
+        }
+
+        function refreshData() {
+            loadServerData();
+        }
+
+        // Initialize
+        loadServerData();
+        updateLiveTime();
+
+        // Update live time every second
+        setInterval(updateLiveTime, 1000);
+
+        // Auto-refresh data every 30 seconds
+        setInterval(loadServerData, 30000);
+
+        console.log('Server Info Page loaded - Lab 01 Nhóm 28');
+    </script>
+</body>
+</html>

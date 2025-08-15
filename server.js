@@ -29,6 +29,11 @@ app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
+// Network monitoring page (Part C)
+app.get('/network-monitor', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'network-monitor.html'));
+});
+
 // API endpoint for server information (Part A requirement)
 app.get('/api/server-info', (req, res) => {
     const serverInfo = {
@@ -54,7 +59,20 @@ app.get('/api/server-info', (req, res) => {
         lab: 'Lab 01 - Part A: Static Web Server'
     };
     
-    res.json(serverInfo);
+    // Check if client wants JSON specifically or if it's an AJAX request
+    const acceptHeader = req.headers.accept || '';
+    const isAjaxRequest = req.headers['x-requested-with'] === 'XMLHttpRequest';
+    const wantsJson = req.query.format === 'json' || 
+                     isAjaxRequest || 
+                     acceptHeader.includes('application/json');
+    
+    if (wantsJson) {
+        // Return JSON for API calls, AJAX requests, or when explicitly requested
+        res.json(serverInfo);
+    } else {
+        // Return HTML page for browser visits
+        res.sendFile(path.join(__dirname, 'public', 'server-info.html'));
+    }
 });
 
 app.get('/api/status', (req, res) => {
@@ -112,22 +130,27 @@ app.use((err, req, res, next) => {
 
 // Enhanced 404 handler
 app.use((req, res) => {
-    res.status(404).json({
-        status: 'error',
-        message: 'Resource not found',
-        requestedPath: req.path,
-        method: req.method,
-        timestamp: new Date().toISOString(),
-        errorCode: 404,
-        group: 'Nhóm 28',
-        availableEndpoints: [
-            'GET /',
-            'GET /api/server-info',
-            'GET /api/status',
-            'GET /api/info',
-            'POST /api/data'
-        ]
-    });
+    // Check if request is for API (starts with /api) - return JSON
+    if (req.path.startsWith('/api/')) {
+        res.status(404).json({
+            status: 'error',
+            message: 'API endpoint not found',
+            requestedPath: req.path,
+            method: req.method,
+            timestamp: new Date().toISOString(),
+            errorCode: 404,
+            group: 'Nhóm 28',
+            availableEndpoints: [
+                'GET /api/server-info',
+                'GET /api/status',
+                'GET /api/info',
+                'POST /api/data'
+            ]
+        });
+    } else {
+        // For web pages - return HTML 404 page
+        res.status(404).sendFile(path.join(__dirname, 'public', '404.html'));
+    }
 });
 
 app.listen(PORT, () => {

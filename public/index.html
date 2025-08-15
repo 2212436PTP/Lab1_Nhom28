@@ -51,6 +51,7 @@
             <div class="test-section">
                 <h3>Server Information & System Details</h3>
                 <button id="getServerInfo" class="btn btn-primary">🔄 Lấy thông tin Server & Hệ thống</button>
+                <a href="/api/server-info" target="_blank" class="btn btn-success">🖥️ Xem trang Server Info</a>
                 <div id="serverInfoResult" class="result-box"></div>
             </div>
 
@@ -101,8 +102,17 @@
         </section>
 
         <section class="network-info">
-            <h2>Thông tin mạng</h2>
+            <h2>Phần C: Network Traffic Analysis</h2>
+            <div class="test-section">
+                <h3>Network Monitoring Dashboard</h3>
+                <a href="/network-monitor" class="btn btn-success">📡 Mở Network Monitor</a>
+                <p style="margin-top: 1rem; color: #666;">
+                    Dashboard theo dõi traffic mạng thời gian thực, phân tích static vs dynamic requests
+                </p>
+            </div>
+            
             <div class="network-stats">
+                <h3>Thống kê mạng hiện tại</h3>
                 <div class="stat-item">
                     <span class="stat-label">Tổng số request:</span>
                     <span id="totalRequests" class="stat-value">0</span>
